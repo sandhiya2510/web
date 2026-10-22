@@ -1,0 +1,145 @@
+MONGODB WITH REACT
+npm init -y
+npm install express cors mongoose
+node server.js
+server.js
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require('cors');
+const app = express();
+app.use(express.json());
+app.use(cors());
+mongoose.connect("mongodb://127.0.0.1:27017/shopDB")
+.then(async () => {
+    console.log("MongoDB Connected");
+
+    const Product = mongoose.model("Product", new mongoose.Schema({
+        id: Number,
+        name: String,
+        price: Number
+    }));
+
+    // Insert initial products if database is empty
+    if (await Product.countDocuments() === 0) {
+        await Product.insertMany([
+            {id:101, name:"Laptop", price:50000},
+            {id:102, name:"Mobile Phone", price:20000},
+            {id:103, name:"Keyboard", price:1500},
+            {id:104, name:"Mouse", price:800},
+            {id:105, name:"Monitor", price:12000},
+            {id:106, name:"Printer", price:9000},
+            {id:107, name:"Headphones", price:2500},
+            {id:108, name:"Tablet", price:18000},
+            {id:109, name:"Webcam", price:3000},
+            {id:110, name:"Speaker", price:4000}
+        ]);
+    }
+
+    // GET: Display all products
+    app.get("/products", async (req, res) => {
+        res.json(await Product.find({}, { _id: 0, __v: 0 }));
+    });
+
+    // POST: Add product
+    app.post("/products", async (req, res) => {
+        await Product.create(req.body);
+        res.json("Product Added Successfully");
+    });
+
+    // PUT: Update product
+    app.put("/products/:id", async (req, res) => {
+        let p = await Product.findOneAndUpdate(
+            { id: Number(req.params.id) },
+            { name: req.body.name, price: req.body.price }
+        );
+
+        res.json(p ? "Product Updated Successfully" : "Product Not Found");
+    });
+
+    // DELETE: Delete product
+    app.delete("/products/:id", async (req, res) => {
+        let p = await Product.findOneAndDelete({
+            id: Number(req.params.id)
+        });
+
+        res.json(p ? "Product Deleted Successfully" : "Product Not Found");
+    });
+
+    app.listen(3000, () => {
+        console.log("Server running on port 3000");
+    });
+})
+.catch(err => console.log(err));
+
+
+npm create vite@latest frontend -- --template react
+cd frontend
+npm install
+npm run dev
+App.jsx
+import { useState, useEffect } from 'react';
+function App() {
+  const [products, setProducts] = useState([]);
+  const [id, setId] = useState('');
+  const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
+  const url = 'http://localhost:3000/products';
+  function getProducts() {
+    fetch(url)
+      .then(res => res.json())
+      .then(data => setProducts(data));
+  }
+  useEffect(() => {
+    getProducts();
+  }, []);
+  function addProduct() {
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: Number(id),
+        name,
+        price: Number(price)
+      })
+    }).then(() => {
+      getProducts();
+      setId('');
+      setName('');
+      setPrice('');
+    });
+  }
+  function updateProduct() {
+    fetch(url + '/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, price: Number(price) })
+    }).then(() => getProducts());
+  }
+  function deleteProduct(id) {
+    fetch(url + '/' + id, { method: 'DELETE' })
+      .then(() => getProducts());
+  }
+  return (
+    <div>
+      <h2>Product Management</h2>
+      <input placeholder="ID" value={id}
+        onChange={e => setId(e.target.value)} />
+      <input placeholder="Name" value={name}
+        onChange={e => setName(e.target.value)} />
+      <input placeholder="Price" value={price}
+        onChange={e => setPrice(e.target.value)} />
+      <button onClick={addProduct}>Add</button>
+      <button onClick={updateProduct}>Update</button>
+      <h3>Products</h3>
+      {products.map(p => (
+        <p key={p.id}>
+          {p.id} - {p.name} - ₹{p.price}
+          <button onClick={() => deleteProduct(p.id)}>
+            Delete
+          </button>
+        </p>
+      ))}
+    </div>
+  );
+}
+export default App;
