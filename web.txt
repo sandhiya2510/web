@@ -1,0 +1,147 @@
+crud op
+server.cjs
+
+const express = require('express');
+const mysql = require('mysql2');
+const cors = require('cors');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'college'
+});
+
+db.connect(err => {
+    if (err) throw err;
+    console.log('MySQL Connected');
+});
+
+app.post('/add', (req, res) => {
+    const {name, dept} = req.body;
+    db.query(
+        'INSERT INTO course (name, dept) VALUES (?, ?)',
+        [name, dept],
+        () => res.send('Course Added')
+    );
+});
+
+app.get('/courses', (req, res) => {
+    db.query('SELECT * FROM course', (err, result) => {
+        res.json(result);
+    });
+});
+
+app.put('/update/:id', (req, res) => {
+    const {name, dept} = req.body;
+    db.query(
+        'UPDATE course SET name=?, dept=? WHERE id=?',
+        [name, dept, req.params.id],
+        () => res.send('Course Updated')
+    );
+});
+
+app.delete('/delete/:id', (req, res) => {
+    db.query(
+        'DELETE FROM course WHERE id=?',
+        [req.params.id],
+        () => res.send('Course Deleted')
+    );
+});
+
+app.listen(3000, () => console.log('Server running on port 3000'));
+
+app.jsx
+
+import React,{useState,useEffect} from 'react';
+import './App.css';
+
+function App(){
+  const [courses,setcourses] = useState([]);
+  const [id,setid]=useState('');
+  const[name,setname]=useState('');
+  const[dept,setdept]=useState('');
+
+  function viewcourse(){
+    fetch('http://localhost:3000/courses')
+    .then(res=>res.json())
+    .then(data=>setcourses(data));
+  }
+  useEffect(()=>{
+    viewcourse();
+  },[]);
+
+  function addcourse(){
+    fetch('http://localhost:3000/add',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:name,dept:dept})
+    }).then(()=>{viewcourse();clearform();});
+  }
+  function updatecourse(){
+    fetch(`http://localhost:3000/update/${id}`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:name,dept:dept})
+    }).then(()=>{viewcourse();clearform();});
+  }
+  function editcourse(course){
+    setid(course.id);
+    setname(course.name);
+    setdept(course.dept);
+  }
+  function deletecourse(id){
+    fetch(`http://localhost:3000/delete/${id}`,{
+      method:'DELETE'
+    }).then(()=>{viewcourse()});
+  }
+  function clearform(){
+    setid('');
+    setname('');
+    setdept('');
+  }
+  return(
+    <div className="container">
+      <h1>STUDENT REG PORTAL</h1>
+      <input type="text" placeholder="name:" value={name} onChange={(e)=>setname(e.target.value)}/>
+      <input type="text" placeholder="dept" value={dept} onChange={(e)=>setdept(e.target.value)}/>
+      <button onClick={addcourse}>ADD</button>
+      <button onClick={updatecourse} disabled={!id}>Update</button>
+      <button onClick={clearform}>Clear</button>
+
+      <h2>Course List</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>dept</th>
+            <th>actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            courses.map(course=>(
+              <tr key={course.id}>
+              <td>{course.id}</td>
+              <td>{course.name}</td>
+              <td>{course.dept}</td>
+              <td>
+                <button onClick={() => editcourse(course)}>Edit</button>
+              <button onClick={() => deletecourse(course.id)}>Delete</button>
+              </td>
+              </tr>
+              ))
+          }
+        </tbody>
+      </table>
+    </div>
+  );
+
+}
+export default App;
+
