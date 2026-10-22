@@ -1,0 +1,88 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+function App() {
+  const [courses, setCourses] = useState([]);
+  const [name, setName] = useState('');
+  const [department, setDepartment] = useState('');
+  const [credits, setCredits] = useState('');
+  const [id, setId] = useState('');
+
+  const url = 'http://localhost:3000';
+
+  function getCourses() {
+    axios.get(url + '/courses').then(res => setCourses(res.data));
+  }
+
+  useEffect(() => {
+    getCourses();
+  }, []);
+
+  function addCourse() {
+    axios.post(url + '/add', { name, department, credits })
+      .then(() => {
+        alert('Course Added');
+        getCourses();
+        setName('');
+        setDepartment('');
+        setCredits('');
+      });
+  }
+
+  function editCourse(course) {
+    setId(course.id);
+    setName(course.name);
+    setDepartment(course.department);
+    setCredits(course.credits);
+  }
+
+  function updateCourse() {
+    axios.put(url + '/update/' + id, { name, department, credits })
+      .then(() => {
+        alert('Course Updated');
+        getCourses();
+        setId('');
+        setName('');
+        setDepartment('');
+        setCredits('');
+      });
+  }
+
+  function deleteCourse(id) {
+    axios.delete(url + '/delete/' + id).then(() => {
+      alert('Course Deleted');
+      getCourses();
+    });
+  }
+
+  return (
+    <div>
+      <h1>Course Management</h1>
+
+      <input placeholder="Course Name" value={name}
+        onChange={e => setName(e.target.value)} />
+
+      <input placeholder="Department" value={department}
+        onChange={e => setDepartment(e.target.value)} />
+
+      <input placeholder="Credits" type="number" value={credits}
+        onChange={e => setCredits(e.target.value)} />
+
+      <button onClick={id ? updateCourse : addCourse}>
+        {id ? 'Update Course' : 'Add Course'}
+      </button>
+
+      <h2>Course List</h2>
+
+      {courses.map(course => (
+        <div key={course.id}>
+          {course.id} - {course.name} - {course.department} - {course.credits}
+          <button onClick={() => editCourse(course)}>Edit</button>
+          <button onClick={() => deleteCourse(course.id)}>Delete</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default App;
